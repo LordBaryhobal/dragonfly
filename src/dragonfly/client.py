@@ -18,7 +18,10 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 from enum import IntEnum, auto
+import selectors
 import socket
+from threading import Thread
+import types
 
 from logger import Logger, LogType
 from message import *
@@ -31,23 +34,119 @@ class State(IntEnum):
     CRASHED = auto()
 
 class Client:
+    """Dragonfly client"""
+
     def __init__(self, username=None, password=None):
+        """Initializes a Client instance
+
+        Keyword Arguments:
+            username {str} -- The client's username (default: {None})
+            password {str} -- The client's password (default: {None})
+        """
+
         self.username = username
         self.password = password
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.selector = selectors.DefaultSelector()
+        self.thread = None
+        self.state = State.STOPPED
     
     def connect(self, host="localhost", port=1869):
-        self.socket.connect((host, port))
+        """Connects to a server and starts listening
 
-        msg = Message()
-        msg.type = MessageType(1<<7 | CONNECT<<4 | 0)
+        Keyword Arguments:
+            host {str} -- The server's host (default: {"localhost"})
+            port {int} -- The server's port (default: {1869})
+        """
+
+        self.state = State.STARTING
+        self.socket.connect((host, port))
+        self.socket.setblocking(False)
+        data = types.SimpleNamespace(addr=(host, port), inb=b"", outb=b"", step=0, length=0)
+        events = selectors.EVENT_READ | selectors.EVENT_WRITE
+        self.selector.register(self.socket, events, data=data)
+
+        msg = Message(ORIGIN_CLIENT, CONNECT)
         msg.username = self.username
         msg.password = self.password
 
-        self.socket.sendall(msg.to_bytes())
+        self.send(msg)
+
+        self.state = State.RUNNING
+
+        self.thread = Thread(target=self.mainloop, daemon=True)
+        self.thread.start()
         
     def disconnect(self):
+        """Stops this client"""
+
+        self.state = State.STOPPING
         self.socket.close()
+        self.state = State.STOPPED
+    
+    def mainloop(self):
+        """Main event loop"""
+
+        while self.state == State.RUNNING:
+            events = self.selector.select(timeout=None)
+
+            for key, mask in events:
+                if not key.data is None:
+                    self.handle_msg(key, mask)
+
+    def send(self, msg):
+        """Sends a message throught the socket
+
+        Arguments:
+            msg {Message} -- Message to send
+        """
+        
+        self.socket.sendall(msg.to_bytes())
+    
+    def handle_msg(self, key, mask):
+        """Handles an event
+
+        Arguments:
+            key {selectors.SelectorKey} -- The event's key
+            mask {selectors._EventMask} -- The event's mask
+        """
+
+        sock = key.fileobj
+        data = key.data
+
+        # Ready to read
+        if mask & selectors.EVENT_READ:
+            recv_data = sock.recv(data.length if data.step == 1 else 7)
+            
+            if recv_data:
+                data.outb += recv_data
+                data.step += 1
+                
+                if data.step == 1:
+                    data.length = struct.unpack(">I", data.outb[-4:])[0]
+
+                elif data.step == 2:
+                    msg = Message()
+                    try:
+                        msg.from_bytes(data.outb)
+                    
+                    except:
+                        Logger.warn(f"Malformed packet from {data.addr}")
+                    
+                    else:
+                        Logger.debug(f"Received {msg} from {data.addr}")
+                        self.process_msg(msg)
+                    
+                    finally:
+                        data.step = 0
+                        data.outb = b""
+        
+        # Ready to write
+        if mask & selectors.EVENT_WRITE:
+            pass
+
+    def process_msg(self, msg):
+        pass
 
 if __name__ == "__main__":
     Logger.setup(LogType.ALL)
@@ -58,6 +157,20 @@ if __name__ == "__main__":
     client = Client(username, password)
     client.connect()
     
+    sub = Message(ORIGIN_CLIENT, SUBSCRIBE)
+    sub.topic = "test"
+    client.send(sub)
+    input(">")
+    
+    client.send(sub)
+    input(">")
+
+    pub = Message(ORIGIN_CLIENT, PUBLISH)
+    pub.topic = "test"
+    pub.body = "Ceci est un test"
+    client.send(pub)
+    input(">")
+
     """
     while True:
         c = input()
