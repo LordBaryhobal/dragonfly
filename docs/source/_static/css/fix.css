@@ -1,0 +1,17 @@
+.admonition.admonition-seealso .admonition-title:before {
+	content: "\f208";
+	color: grey;
+}
+.admonition.admonition-todo .admonition-title:before {
+	content: "\f279";
+	color: grey;
+}
+
+
+.field-list tr:not(:first-child) th.field-name {
+	border-top: solid white 2px;
+}
+
+.admonition {
+	margin: 20px 0;
+}
