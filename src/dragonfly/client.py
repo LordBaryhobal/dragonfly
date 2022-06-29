@@ -52,6 +52,7 @@ class Client:
         self.state = State.STOPPED
 
         self.on_connected = lambda self, code: None
+        self.on_disconnected = lambda self, code: None
         self.on_published = lambda self, code: None
         self.on_subscribed = lambda self, code: None
         self.on_unsubscribed = lambda self, code: None
@@ -85,20 +86,25 @@ class Client:
         
     def disconnect(self):
         """Stops this client"""
-
         self.state = State.STOPPING
+
+        self.send(Message(ORIGIN_CLIENT, CONNECT, 4)) # Disconnect
+        self.thread.join()
+    
+    def disconnected(self):
+        """Closes the socket"""
+
         self.socket.close()
         self.state = State.STOPPED
     
     def mainloop(self):
         """Main event loop"""
 
-        while self.state == State.RUNNING:
+        while self.state in [State.RUNNING, State.STOPPING]:
             events = self.selector.select(timeout=None)
 
             for key, mask in events:
-                if not key.data is None:
-                    self.handle_msg(key, mask)
+                self.handle_msg(key, mask)
 
     def send(self, msg):
         """Sends a message throught the socket
@@ -164,7 +170,13 @@ class Client:
         if t.origin == ORIGIN_SERVER:
             if t.type == CONNECTED:
                 code = msg.code
-                self.on_connected(self, code)
+
+                if t.flags & 4:
+                    self.disconnected()
+                    self.on_disconnected(self, code)
+                
+                else:
+                    self.on_connected(self, code)
             
             elif t.type == PUBLISHED:
                 code = msg.code

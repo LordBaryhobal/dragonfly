@@ -204,26 +204,32 @@ class Server:
         """
 
         t = msg.type
-        if t.type == CONNECT:
-            sender.username = msg.username
-            sender.password = msg.password
+        if t.origin == ORIGIN_CLIENT:
+            if t.type == CONNECT:
+                if t.flags & 4:
+                    sender.send(Message(ORIGIN_SERVER, CONNECTED, 4, code=0x00))
+                    self.close_conn(sender.id)
+                
+                else:
+                    sender.username = msg.username
+                    sender.password = msg.password
+                    
+                    ack = Message(ORIGIN_SERVER, CONNECTED)
+                    ack.code = 0x00
+                    
+                    if not sender.check_auth(CONNECT):
+                        ack.code = 0x81
+                    
+                    sender.send(ack)
             
-            ack = Message(ORIGIN_SERVER, CONNECTED)
-            ack.code = 0x00
+            elif t.type == PUBLISH:
+                self.publish(msg, sender)
             
-            if not sender.check_auth(CONNECT):
-                ack.code = 0x81
+            elif t.type == SUBSCRIBE:
+                self.subscribe(msg, sender)
             
-            sender.send(ack)
-        
-        elif t.type == PUBLISH:
-            self.publish(msg, sender)
-        
-        elif t.type == SUBSCRIBE:
-            self.subscribe(msg, sender)
-        
-        elif t.type == UNSUBSCRIBE:
-            self.unsubscribe(msg, sender)
+            elif t.type == UNSUBSCRIBE:
+                self.unsubscribe(msg, sender)
     
     def publish(self, msg, sender):
         """Processes a PUBLISH message
