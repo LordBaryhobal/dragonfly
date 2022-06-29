@@ -20,9 +20,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 from enum import IntEnum, auto
 import selectors
 import socket
+import struct
 import types
 
 from logger import Logger, LogType
+from message import *
 
 class State(IntEnum):
     STOPPED = auto()
@@ -92,7 +94,7 @@ class Server:
         conn, addr = socket.accept()
         Logger.debug(f"Accepted connection from {addr}")
         conn.setblocking(False)
-        data = types.SimpleNamespace(addr=addr, inb=b"", outb=b"")
+        data = types.SimpleNamespace(addr=addr, inb=b"", outb=b"", step=0, length=0)
         events = selectors.EVENT_READ | selectors.EVENT_WRITE
         self.selector.register(conn, events, data=data)
 
@@ -103,7 +105,7 @@ class Server:
             socket {socket.socket} -- Socket to close
         """
 
-        Logger.debug(f"Closing connection {socket}")
+        Logger.debug(f"Closing connection {socket.getpeername()}")
         self.selector.unregister(socket)
         socket.close()
 
@@ -114,17 +116,27 @@ class Server:
             key {selectors.SelectorKey} -- The event's key
             mask {selectors._EventMask} -- The event's mask
         """
-        
+
         socket = key.fileobj
         data = key.data
 
         # Ready to read
         if mask & selectors.EVENT_READ:
-            recv_data = socket.recv(1024)
+            recv_data = socket.recv(data.length if data.step == 1 else 7)
             
             if recv_data:
-                Logger.debug(f"Received {recv_data!r} (part) from {data.addr}")
                 data.outb += recv_data
+                data.step += 1
+                
+                if data.step == 1:
+                    data.length = struct.unpack(">I", data.outb[-4:])[0]
+
+                elif data.step == 2:
+                    msg = Message()
+                    msg.from_bytes(data.outb)
+                    Logger.debug(f"Received {msg} from {data.addr}")
+                    data.step = 0
+                    data.outb = b""
             
             else:
                 self.close_conn(socket)

@@ -21,6 +21,7 @@ from enum import IntEnum, auto
 import socket
 
 from logger import Logger, LogType
+from message import *
 
 class State(IntEnum):
     STOPPED = auto()
@@ -30,11 +31,20 @@ class State(IntEnum):
     CRASHED = auto()
 
 class Client:
-    def __init__(self):
+    def __init__(self, username=None, password=None):
+        self.username = username
+        self.password = password
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     
     def connect(self, host="localhost", port=1869):
         self.socket.connect((host, port))
+
+        msg = Message()
+        msg.type = MessageType(1<<7 | CONNECT<<4 | 0)
+        msg.username = self.username
+        msg.password = self.password
+
+        self.socket.sendall(msg.to_bytes())
         
     def disconnect(self):
         self.socket.close()
@@ -42,14 +52,18 @@ class Client:
 if __name__ == "__main__":
     Logger.setup(LogType.ALL)
 
-    client = Client()
+    username = "Baryhobal"
+    password = "123456789"
+
+    client = Client(username, password)
     client.connect()
     
+    """
     while True:
         c = input()
         if c:
             client.socket.sendall(c.encode("utf-8"))
         else:
-            break
+            break"""
 
     client.disconnect()
