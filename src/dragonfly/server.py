@@ -85,13 +85,14 @@ class Server:
                 else:
                     self.handle_msg(key, mask)
 
-    def new_conn(self, socket):
+    def new_conn(self, sock):
         """Accepts a new connection
 
         Arguments:
-            socket {socket.socket} -- incoming socket connection
+            sock {socket.socket} -- incoming socket connection
         """
-        conn, addr = socket.accept()
+
+        conn, addr = sock.accept()
         Logger.debug(f"Accepted connection from {addr}")
         conn.setblocking(False)
         data = types.SimpleNamespace(addr=addr, inb=b"", outb=b"", step=0, length=0)
@@ -117,12 +118,12 @@ class Server:
             mask {selectors._EventMask} -- The event's mask
         """
 
-        socket = key.fileobj
+        sock = key.fileobj
         data = key.data
 
         # Ready to read
         if mask & selectors.EVENT_READ:
-            recv_data = socket.recv(data.length if data.step == 1 else 7)
+            recv_data = sock.recv(data.length if data.step == 1 else 7)
             
             if recv_data:
                 data.outb += recv_data
@@ -139,7 +140,7 @@ class Server:
                     data.outb = b""
             
             else:
-                self.close_conn(socket)
+                self.close_conn(sock)
         
         # Ready to write
         if mask & selectors.EVENT_WRITE:
