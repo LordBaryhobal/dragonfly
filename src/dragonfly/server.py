@@ -316,7 +316,7 @@ class Server:
                 
             self.topics[topic].remove(client.id)
 
-            if len(self.topcs[topic]) == 0:
+            if len(self.topics[topic]) == 0:
                 del self.topics[topic]
 
             Logger.debug(f"{client} unsubscribed from {topic}")
