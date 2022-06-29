@@ -10,7 +10,7 @@ Welcome to dragonfly's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-
+   dragonfly
 
 Indices and tables
 ==================
