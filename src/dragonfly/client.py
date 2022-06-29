@@ -124,8 +124,10 @@ class Client:
                 
                 if data.step == 1:
                     data.length = struct.unpack(">I", data.outb[-4:])[0]
+                    if data.length == 0:
+                        data.step = 2
 
-                elif data.step == 2:
+                if data.step == 2:
                     msg = Message()
                     try:
                         msg.from_bytes(data.outb)
