@@ -50,6 +50,12 @@ class Client:
         self.selector = selectors.DefaultSelector()
         self.thread = None
         self.state = State.STOPPED
+
+        self.on_connected = lambda self, code: None
+        self.on_published = lambda self, code: None
+        self.on_subscribed = lambda self, code: None
+        self.on_unsubscribed = lambda self, code: None
+        self.on_message = lambda self, topic, msg: None
     
     def connect(self, host="localhost", port=1869):
         """Connects to a server and starts listening
@@ -148,17 +154,101 @@ class Client:
             pass
 
     def process_msg(self, msg):
-        pass
+        """Processes a message
+
+        Arguments:
+            msg {Message} -- The message instance
+        """
+
+        t = msg.type
+        if t.origin == ORIGIN_SERVER:
+            if t.type == CONNECTED:
+                code = msg.code
+                self.on_connected(self, code)
+            
+            elif t.type == PUBLISHED:
+                code = msg.code
+                self.on_published(self, code)
+            
+            elif t.type == SUBSCRIBED:
+                code = msg.code
+                self.on_subscribed(self, code)
+            
+            elif t.type == UNSUBSCRIBED:
+                code = msg.code
+                self.on_unsubscribed(self, code)
+            
+            elif t.type == PUBLISH:
+                topic, body = msg.topic, msg.body
+                self.on_message(self, topic, body)
+    
+    """
+    Public api
+    """
+
+    def subscribe(self, topic):
+        self.send(Message(ORIGIN_CLIENT, SUBSCRIBE, topic=topic))
+    
+    def unsubscribe(self, topic):
+        self.send(Message(ORIGIN_CLIENT, UNSUBSCRIBE, topic=topic))
+    
+    def publish(self, topic, msg):
+        self.send(Message(ORIGIN_CLIENT, PUBLISH, topic=topic, body=msg))
+
+
+def on_c(self, code):
+    Logger.info(f"Connected {code}")
+
+def on_p(self, code):
+    Logger.info(f"Published {code}")
+
+def on_s(self, code):
+    Logger.info(f"Subscribed {code}")
+
+def on_u(self, code):
+    Logger.info(f"Unsubscribed {code}")
+
+def on_m(self, topic, msg):
+    Logger.info(f"Message in {topic}: {msg}")
 
 if __name__ == "__main__":
-    Logger.setup(LogType.ALL)
+    #Logger.setup(LogType.ALL)
+    Logger.setup(LogType.INFO|LogType.WARN|LogType.ERROR)
 
     username = "Baryhobal"
     password = "123456789"
 
     client = Client(username, password)
     client.connect()
+
+    client.on_connected = on_c
+    client.on_published = on_p
+    client.on_subscribed = on_s
+    client.on_unsubscribed = on_u
+    client.on_message = on_m
     
+    client.subscribe("test")
+    input(">")
+
+    client.subscribe("test")
+    input(">")
+    
+    client.publish("test", "Essai")
+    input(">")
+    
+    client.publish("essai", "Essai")
+    input(">")
+    
+    client.unsubscribe("test")
+    input(">")
+    
+    client.unsubscribe("test")
+    input(">")
+
+    client.publish("test", "Essai")
+    input(">")
+
+    """
     sub = Message(ORIGIN_CLIENT, SUBSCRIBE)
     sub.topic = "test"
     client.send(sub)
@@ -172,6 +262,7 @@ if __name__ == "__main__":
     pub.body = "Ceci est un test"
     client.send(pub)
     input(">")
+    """
 
     """
     while True:
