@@ -18,6 +18,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 from enum import IntEnum, auto
+import re
 import selectors
 import socket
 import struct
@@ -147,6 +148,7 @@ class Server:
                     
                     else:
                         Logger.debug(f"Received {msg} from {data.addr}")
+                        self.process_msg(msg, self.clients[data.id])
                     
                     finally:
                         data.step = 0
@@ -191,6 +193,136 @@ class Server:
         
         self.clients[id_] = None
     
+    def process_msg(self, msg, sender):
+        """Processes a message
+
+        Arguments:
+            msg {Message} -- The message instance
+            sender {Client} -- The sender client
+        """
+
+        t = msg.type
+        if t.type == CONNECT:
+            sender.username = msg.username
+            sender.password = msg.password
+            
+            ack = Message(ORIGIN_SERVER, CONNECTED)
+            ack.code = 0x00
+            
+            if not sender.check_auth(CONNECT):
+                ack.code = 0x81
+            
+            sender.send(ack)
+        
+        elif t.type == PUBLISH:
+            self.publish(msg, sender)
+        
+        elif t.type == SUBSCRIBE:
+            self.subscribe(msg, sender)
+        
+        elif t.type == UNSUBSCRIBE:
+            self.unsubscribe(msg, sender)
+    
+    def publish(self, msg, sender):
+        """Processes a PUBLISH message
+
+        Arguments:
+            msg {Message} -- The PUBLISH message
+            sender {Client} -- The sender client
+        """
+
+        ack = Message(ORIGIN_SERVER, PUBLISHED)
+        ack.code = 0x00
+
+        if not sender.check_auth(PUBLISH, msg.topic):
+            ack.code = 0x81
+
+        else:
+            Logger.debug(f"{sender} published {msg.body} to {msg.topic}")
+            for topic, ids in self.topics.items():
+                if self.topic_match(topic, msg.topic):
+                    for id_ in ids:
+                        client = self.clients[id_]
+                        msg.type.origin = ORIGIN_SERVER
+                        client.send(msg)
+                        Logger.debug(f"Relaying to {client}")
+        
+        sender.send(ack)
+    
+    def topic_match(self, pattern, topic):
+        """Returns wether `topic` matches `pattern`
+
+        Arguments:
+            pattern {str} -- Topic pattern
+            topic {str} -- Topic to match
+
+        Returns:
+            bool -- True if topic matches
+        """
+
+        return bool(re.match(pattern, topic))
+    
+    def subscribe(self, msg, client):
+        """Processes a SUBSCRIBE message
+
+        Arguments:
+            msg {Message} -- The SUBSCRIBE message
+            sender {Client} -- The sender client
+        """
+
+        topic = msg.topic
+        
+        ack = Message(ORIGIN_SERVER, SUBSCRIBED)
+        ack.code = 0x00
+
+        if not client.check_auth(SUBSCRIBE, topic):
+            ack.code = 0x81
+
+        elif topic in client.topics:
+            ack.code = 0x01
+        
+        else:
+            client.topics.append(topic)
+            if not topic in self.topics:
+                self.topics[topic] = []
+                
+            self.topics[topic].append(client.id)
+
+            Logger.debug(f"{client} subscribed to {topic}")
+        
+        client.send(ack)
+    
+    def unsubscribe(self, msg, client):
+        """Processes a UNSUBSCRIBE message
+
+        Arguments:
+            msg {Message} -- The UNSUBSCRIBE message
+            sender {Client} -- The sender client
+        """
+
+        topic = msg.topic
+        
+        ack = Message(ORIGIN_SERVER, UNSUBSCRIBED)
+        ack.code = 0x00
+
+        if not client.check_auth(UNSUBSCRIBE, topic):
+            ack.code = 0x81
+
+        elif not topic in client.topics:
+            ack.code = 0x01
+        
+        else:
+            client.topics.remove(topic)
+                
+            self.topics[topic].remove(client.id)
+
+            if len(self.topcs[topic]) == 0:
+                del self.topics[topic]
+
+            Logger.debug(f"{client} unsubscribed from {topic}")
+        
+        client.send(ack)
+
 class Client:
     """Represents a client"""
 
