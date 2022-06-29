@@ -111,7 +111,7 @@ class Message:
         elif self.type.type == UNSUBSCRIBE:
             self.topic = self.read_string(stream)
         
-        elif self.type.type in [PUBLISHED, SUBSCRIBED, UNSUBSCRIBED]:
+        elif self.type.type in [CONNECTED, PUBLISHED, SUBSCRIBED, UNSUBSCRIBED]:
             self.code = struct.unpack(">B", stream.read(1))[0]
         
 
@@ -127,11 +127,11 @@ class Message:
         body = b""
 
         if self.type.type == CONNECT:
-            if self.username:
+            if hasattr(self, "username") and self.username:
                 self.type.flags |= FLAG_1
                 body += self.write_string(self.username)
             
-            if self.password:
+            if hasattr(self, "password") and self.password:
                 self.type.flags |= FLAG_0
                 body += self.write_string(self.password)
 
@@ -145,7 +145,7 @@ class Message:
         elif self.type.type == UNSUBSCRIBE:
             body += self.write_string(self.topic)
         
-        elif self.type.type in [PUBLISHED, SUBSCRIBED, UNSUBSCRIBED]:
+        elif self.type.type in [CONNECTED, PUBLISHED, SUBSCRIBED, UNSUBSCRIBED]:
             body += struct.pack(">B", self.code)
 
         bytes_ += struct.pack(">H", self.version)
