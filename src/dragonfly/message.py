@@ -243,6 +243,7 @@ class Message:
             bytes -- Encoded string
         """
 
+        if string is None: string = ""
         bytes_ = struct.pack(">H", len(string))
         bytes_ += string.encode("utf-8")
         return bytes_
