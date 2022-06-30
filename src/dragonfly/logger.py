@@ -16,77 +16,41 @@
 
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
-from enum import IntFlag, auto
-from time import strftime
+import logging
 
-class LogType(IntFlag):
-    INFO = auto()
-    WARN = auto()
-    ERROR = auto()
-    DEBUG = auto()
-    ALL = 15
+FORMAT = "[%(asctime)s][%(levelname)s] %(message)s"
+DATEFMT = "%Y-%m-%d %H:%M:%S"
 
-class Logger:
-    """Static logger"""
+class ColorFormatter(logging.Formatter):
+    italic_magenta = "\x1b[95;3m"
+    grey = "\x1b[37m"
+    yellow = "\x1b[33m"
+    red = "\x1b[31m"
+    bold_red = "\x1b[31;1m"
+    reset = "\x1b[0m"
 
-    level = LogType.WARN|LogType.ERROR
+    FORMATS = {
+        logging.DEBUG: italic_magenta,
+        logging.INFO: grey,
+        logging.WARNING: yellow,
+        logging.ERROR: red,
+        logging.CRITICAL: bold_red
+    }
 
-    def setup(level=LogType.WARN|LogType.ERROR):
-        """Sets up the logging configuration
+    def __init__(self, fmt=None, datefmt=None, style="%"):
+        super().__init__(fmt, datefmt, style)
+        self.my_fmt = fmt
+        self.my_datefmt = datefmt
 
-        Keyword Arguments:
-            level {LogType} -- Log types to log (default: {LogType.WARN | LogType.ERROR})
-        """
+    def format(self, record):
+        log_fmt = self.FORMATS.get(record.levelno)
+        formatter = logging.Formatter(log_fmt+self.my_fmt+ColorFormatter.reset, self.my_datefmt)
+        return formatter.format(record)
 
-        Logger.level = level
-    
-    def log(msg, level):
-        """Logs a message with the given log level
-
-        Arguments:
-            msg {str} -- Message to log
-            level {LogType} -- Log level
-        """
-
-        if level & Logger.level == 0:
-            return
-        
-        print(strftime("[%Y-%m-%d %H:%M:%S] "), end="")
-        print(f"[{level.name}] ", end="")
-        print(msg)
-    
-    def info(msg):
-        """Logs a message with level LogType.INFO
-
-        Arguments:
-            msg {str} -- Message to log
-        """
-
-        Logger.log(msg, LogType.INFO)
-    
-    def warn(msg):
-        """Logs a message with level LogType.WARN
-
-        Arguments:
-            msg {str} -- Message to log
-        """
-
-        Logger.log(msg, LogType.WARN)
-    
-    def error(msg):
-        """Logs a message with level LogType.ERROR
-
-        Arguments:
-            msg {str} -- Message to log
-        """
-
-        Logger.log(msg, LogType.ERROR)
-    
-    def debug(msg):
-        """Logs a message with level LogType.DEBUG
-
-        Arguments:
-            msg {str} -- Message to log
-        """
-
-        Logger.log(msg, LogType.DEBUG)
+def setup():
+    logger = logging.getLogger("dragonfly")
+    logger.setLevel(logging.DEBUG)
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.DEBUG)
+    ch.setFormatter(ColorFormatter(FORMAT, DATEFMT))
+    logger.addHandler(ch)

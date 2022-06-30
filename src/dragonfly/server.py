@@ -17,13 +17,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 from enum import IntEnum, auto
+import logging
 import re
 import selectors
 import socket
 import struct
 import types
 
-from dragonfly.logger import Logger, LogType
 from dragonfly.message import *
 
 class State(IntEnum):
@@ -51,6 +51,7 @@ class Server:
         self.clients = []
         self.topics = {}
         self.state = State.STOPPED
+        self.logger = logging.getLogger("dragonfly")
     
     def start(self):
         """Starts this server"""
@@ -60,7 +61,7 @@ class Server:
         self.socket.listen()
         self.socket.setblocking(False)
         self.selector.register(self.socket, selectors.EVENT_READ, data=None)
-        Logger.info(f"Dragonfly server listening on {(self.host, self.port)}")
+        self.logger.info(f"Dragonfly server listening on {(self.host, self.port)}")
         self.state = State.RUNNING
 
         self.mainloop()
@@ -96,7 +97,7 @@ class Server:
 
         conn, addr = sock.accept()
         client = self.new_client(conn)
-        Logger.debug(f"Accepted connection from {addr}")
+        self.logger.debug(f"Accepted connection from {addr}")
         conn.setblocking(False)
         data = types.SimpleNamespace(addr=addr, inb=b"", outb=b"", step=0, length=0, id=client.id)
         events = selectors.EVENT_READ | selectors.EVENT_WRITE
@@ -110,7 +111,7 @@ class Server:
         """
 
         client = self.clients[id_]
-        Logger.debug(f"Closing connection {client.socket.getpeername()}")
+        self.logger.debug(f"Closing connection {client.socket.getpeername()}")
         self.selector.unregister(client.socket)
         client.socket.close()
         self.remove_client(id_)
@@ -141,19 +142,12 @@ class Server:
 
                 if data.step == 2:
                     msg = Message()
-                    try:
-                        msg.from_bytes(data.outb)
-                    
-                    except:
-                        Logger.warn(f"Malformed packet from {data.addr}")
-                    
-                    else:
-                        Logger.debug(f"Received {msg} from {data.addr}")
+                    if msg.from_bytes(data.outb):
+                        self.logger.debug(f"Received {msg} from {data.addr}")
                         self.process_msg(msg, self.clients[data.id])
                     
-                    finally:
-                        data.step = 0
-                        data.outb = b""
+                    data.step = 0
+                    data.outb = b""
             
             else:
                 self.close_conn(data.id)
@@ -245,14 +239,14 @@ class Server:
             ack.code = 0x81
 
         else:
-            Logger.debug(f"{sender} published {msg.body} to {msg.topic}")
+            self.logger.debug(f"{sender} published {msg.body} to {msg.topic}")
             for topic, ids in self.topics.items():
                 if self.topic_match(topic, msg.topic):
                     for id_ in ids:
                         client = self.clients[id_]
                         msg.type.origin = ORIGIN_SERVER
                         client.send(msg)
-                        Logger.debug(f"Relaying to {client}")
+                        self.logger.debug(f"Relaying to {client}")
         
         sender.send(ack)
     
@@ -295,7 +289,7 @@ class Server:
                 
             self.topics[topic].append(client.id)
 
-            Logger.debug(f"{client} subscribed to {topic}")
+            self.logger.debug(f"{client} subscribed to {topic}")
         
         client.send(ack)
     
@@ -326,7 +320,7 @@ class Server:
             if len(self.topics[topic]) == 0:
                 del self.topics[topic]
 
-            Logger.debug(f"{client} unsubscribed from {topic}")
+            self.logger.debug(f"{client} unsubscribed from {topic}")
         
         client.send(ack)
 
@@ -375,8 +369,6 @@ class Client:
         return True
 
 if __name__ == "__main__":
-    Logger.setup(LogType.ALL)
-
     import threading
     server = Server()
     

@@ -17,12 +17,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 from enum import IntEnum, auto
+import logging
 import selectors
 import socket
 from threading import Thread
 import types
 
-from dragonfly.logger import Logger, LogType
 from dragonfly.message import *
 
 class State(IntEnum):
@@ -56,6 +56,8 @@ class Client:
         self.on_subscribed = lambda self, code: None
         self.on_unsubscribed = lambda self, code: None
         self.on_message = lambda self, topic, msg: None
+
+        self.logger = logging.getLogger("dragonfly")
     
     def connect(self, host="localhost", port=1869):
         """Connects to a server and starts listening
@@ -144,10 +146,10 @@ class Client:
                         msg.from_bytes(data.outb)
                     
                     except:
-                        Logger.warn(f"Malformed packet from {data.addr}")
+                        self.logger.warn(f"Malformed packet from {data.addr}")
                     
                     else:
-                        Logger.debug(f"Received {msg} from {data.addr}")
+                        self.logger.debug(f"Received {msg} from {data.addr}")
                         self.process_msg(msg)
                     
                     finally:
@@ -208,24 +210,21 @@ class Client:
 
 
 def on_c(self, code):
-    Logger.info(f"Connected {code}")
+    self.logger.info(f"Connected {code}")
 
 def on_p(self, code):
-    Logger.info(f"Published {code}")
+    self.logger.info(f"Published {code}")
 
 def on_s(self, code):
-    Logger.info(f"Subscribed {code}")
+    self.logger.info(f"Subscribed {code}")
 
 def on_u(self, code):
-    Logger.info(f"Unsubscribed {code}")
+    self.logger.info(f"Unsubscribed {code}")
 
 def on_m(self, topic, msg):
-    Logger.info(f"Message in {topic}: {msg}")
+    self.logger.info(f"Message in {topic}: {msg}")
 
 if __name__ == "__main__":
-    #Logger.setup(LogType.ALL)
-    Logger.setup(LogType.INFO|LogType.WARN|LogType.ERROR)
-
     username = "Baryhobal"
     password = "123456789"
 
