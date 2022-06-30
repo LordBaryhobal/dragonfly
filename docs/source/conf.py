@@ -20,7 +20,6 @@
 import os
 import sys
 sys.path.insert(0, os.path.abspath('../../src'))
-print(os.path.abspath('../src'))
 
 import sphinx_redactor_theme
 #import sphinx_press_theme
