@@ -66,6 +66,8 @@ class MessageType:
 class Message:
     """Dragonfly message"""
 
+    VERSION = 0
+
     def __init__(self, origin=ORIGIN_SERVER, type_=CONNECT, flags=0, **kwargs):
         """Initializes a Message instance
 
@@ -77,7 +79,7 @@ class Message:
         """
 
         self.bytes = b""
-        self.version = 0
+        self.version = self.VERSION
         self.type = MessageType(origin<<7 | type_<<4 | flags)
         for k, v in kwargs.items():
             setattr(self, k, v)

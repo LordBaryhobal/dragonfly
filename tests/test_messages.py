@@ -33,7 +33,7 @@ class TestMessageDefaults(unittest.TestCase):
         self.msg = Message()
     
     def test_version(self):
-        self.assertEqual(self.msg.version, 0)
+        self.assertEqual(self.msg.version, Message.VERSION)
     
     def test_origin(self):
         self.assertEqual(self.msg.type.origin, 0)
@@ -106,12 +106,6 @@ class TestMessageEncoding(unittest.TestCase):
                     length = 2
                 
                 self.assertEqual(msg.to_bytes(), b"\x00\x00"+b+struct.pack(">I", length)+b"\x00"*length)
-    
-    def test_invalid_type(self):
-        with self.assertLogs("dragonfly", logging.ERROR):
-            msg = Message()
-            msg.type.type = 7239847598
-            msg.to_bytes()
     
     def test_decode_connect(self):
         bytes_ = b"\x00\x00\x00\x00\x00\x00\x00"
@@ -190,6 +184,19 @@ class TestMessageEncoding(unittest.TestCase):
                 self.assertEqual(msg.type.type, t)
                 self.assertEqual(msg.code, 42)
     
+    def test_decode_invalid_type(self):
+        i = MessageType.__init__
+        def f(self, *args, **kwargs):
+            i(self, *args, **kwargs)
+            self.type = 42
+        
+        MessageType.__init__ = f
+
+        with self.assertLogs("dragonfly", logging.ERROR):
+            msg = Message()
+            msg.from_bytes(b"\x00\x00\x00\x00\x00\x00\x00")
+
+        MessageType.__init__ = i
 
 
     def test_encode_connect(self):
@@ -234,3 +241,14 @@ class TestMessageEncoding(unittest.TestCase):
                 bytes_ = b"\x00\x00"+b+b"\x00\x00\x00\x01\x2a"
                 msg = Message(type_=t, code=42)
                 self.assertEqual(msg.to_bytes(), bytes_)
+    
+    def test_encode_invalid_type(self):
+        with self.assertLogs("dragonfly", logging.ERROR):
+            msg = Message()
+            msg.type.type = 7239847598
+            msg.to_bytes()
+    
+
+class TestMisc(unittest.TestCase):
+    def test_type_name_unknown(self):
+        self.assertEqual(type_name(42), "UNKNOWN-TYPE")
