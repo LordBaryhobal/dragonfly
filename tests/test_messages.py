@@ -23,7 +23,6 @@ import sys
 
 sys.path.append("src")
 
-from dragonfly.bytes import ByteStream
 from dragonfly.exceptions import InvalidMessageType
 from dragonfly.message import ORIGIN_SERVER, ORIGIN_CLIENT
 from dragonfly.message import CONNECT, CONNECTED, PUBLISH, PUBLISHED, SUBSCRIBE, SUBSCRIBED, UNSUBSCRIBE, UNSUBSCRIBED
@@ -235,56 +234,3 @@ class TestMessageEncoding(unittest.TestCase):
                 bytes_ = b"\x00\x00"+b+b"\x00\x00\x00\x01\x2a"
                 msg = Message(type_=t, code=42)
                 self.assertEqual(msg.to_bytes(), bytes_)
-
-class TestByteStream(unittest.TestCase):
-    def setUp(self):
-        self.bytes = b"".join([n.to_bytes(1, "big") for n in range(8)])
-        self.stream = ByteStream(self.bytes)
-    
-    def test_seek(self):
-        # pos, offset, anchor, result
-        positions = [
-            (0, 0, 0, 0),
-            (4, 0, 0, 0),
-            (0, 4, 0, 4),
-            (2, 2, 0, 2),
-
-            (0, 0, 1, 0),
-            (4, 0, 1, 4),
-            (0, 4, 1, 4),
-            (2, 2, 1, 4),
-
-            (0, 0, 2, 8),
-            (4, 0, 2, 8),
-            (0,-4, 2, 4),
-            (2,-2, 2, 6),
-
-            (0, -4, 0, 0),
-            (0, 10, 0, 8),
-            (0, -4, 1, 0),
-            (6,  4, 1, 8),
-            (0,-10, 2, 0),
-            (0,  4, 2, 8)
-        ]
-
-        for p, o, a, r in positions:
-            with self.subTest(pos=p, offset=o, anchor=a, result=r):
-                self.stream.pos = p
-                self.stream.seek(o, a)
-                self.assertEqual(self.stream.pos, r)
-    
-    def test_read_to_end(self):
-        self.stream.seek(0)
-        self.assertEqual(self.stream.read(), b"\x00\x01\x02\x03\x04\x05\x06\x07")
-    
-    def test_read_zero(self):
-        self.stream.seek(0)
-        self.assertEqual(self.stream.read(0), b"")
-    
-    def test_read(self):
-        self.stream.seek(0)
-        self.assertEqual(self.stream.read(3), b"\x00\x01\x02")
-    
-    def test_read_eof(self):
-        self.stream.seek(0)
-        self.assertEqual(self.stream.read(10), b"\x00\x01\x02\x03\x04\x05\x06\x07")
