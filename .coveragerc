@@ -1,5 +1,6 @@
 [html]
 dark_theme = True
+show_contexts = True
 
 [report]
 # Regexes for lines to exclude from consideration
@@ -14,3 +15,6 @@ exclude_lines =
     if 0:
     if False:
     if __name__ == .__main__.:
+
+[run]
+dynamic_context = test_function
