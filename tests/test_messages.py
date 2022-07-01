@@ -273,6 +273,10 @@ class TestByteStream(unittest.TestCase):
                 self.stream.seek(o, a)
                 self.assertEqual(self.stream.pos, r)
     
+    def test_read_to_end(self):
+        self.stream.seek(0)
+        self.assertEqual(self.stream.read(), b"\x00\x01\x02\x03\x04\x05\x06\x07")
+    
     def test_read_zero(self):
         self.stream.seek(0)
         self.assertEqual(self.stream.read(0), b"")

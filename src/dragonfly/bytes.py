@@ -59,7 +59,7 @@ class ByteStream:
         
         self.clamp()
     
-    def read(self, count):
+    def read(self, count=-1):
         """Reads a certain amount of bytes from the stream
 
         Arguments:
@@ -67,14 +67,16 @@ class ByteStream:
 
         Returns:
             bytes -- Bytes read
-
-        Todo:
-            * Check for EOF
-            * Add default count=-1 -> read to end
         """
 
-        bytes_ = self.bytes[self.pos:self.pos+count]
-        self.pos += count
+        if count == -1:
+            bytes_ = self.bytes[self.pos:]
+            self.pos = len(self.bytes)
+        
+        else:
+            bytes_ = self.bytes[self.pos:self.pos+count]
+            self.pos += count
+        
         self.clamp()
 
         return bytes_
