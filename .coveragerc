@@ -1,5 +1,5 @@
 [html]
-extra_css = coverage.css
+dark_theme = True
 
 [report]
 # Regexes for lines to exclude from consideration
