@@ -1,5 +1,5 @@
 [html]
-dark_theme = True
+theme = github_dark_dimmed
 show_contexts = True
 
 [report]
