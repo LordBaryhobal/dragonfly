@@ -24,6 +24,7 @@ import socket
 import struct
 import types
 
+from dragonfly.config import Config
 from dragonfly.message import *
 
 class State(IntEnum):
@@ -36,7 +37,7 @@ class State(IntEnum):
 class Server:
     """Dragonfly server"""
 
-    def __init__(self, host="localhost", port=1869):
+    def __init__(self, host="localhost", port=1869, config=None):
         """Initializes a Server instance
 
         Keyword Arguments:
@@ -44,6 +45,9 @@ class Server:
             port {int} -- Socket port (default: {1869})
         """
 
+        self.config_path = config
+        self.config = Config(self.config_path)
+        
         self.host = host
         self.port = port
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -211,8 +215,11 @@ class Server:
                     ack = Message(ORIGIN_SERVER, CONNECTED)
                     ack.code = 0x00
                     
-                    if not sender.check_auth(CONNECT):
+                    if not self.check_auth(sender, CONNECT):
                         ack.code = 0x81
+                    
+                    else:
+                        sender.connected = True
                     
                     sender.send(ack)
             
@@ -236,7 +243,7 @@ class Server:
         ack = Message(ORIGIN_SERVER, PUBLISHED)
         ack.code = 0x00
 
-        if not sender.check_auth(PUBLISH, msg.topic):
+        if not self.check_auth(sender, PUBLISH, msg.topic):
             ack.code = 0x81
 
         else:
@@ -277,7 +284,7 @@ class Server:
         ack = Message(ORIGIN_SERVER, SUBSCRIBED)
         ack.code = 0x00
 
-        if not client.check_auth(SUBSCRIBE, topic):
+        if not self.check_auth(client, SUBSCRIBE, topic):
             ack.code = 0x81
 
         elif topic in client.topics:
@@ -307,7 +314,7 @@ class Server:
         ack = Message(ORIGIN_SERVER, UNSUBSCRIBED)
         ack.code = 0x00
 
-        if not client.check_auth(UNSUBSCRIBE, topic):
+        if not self.check_auth(client, UNSUBSCRIBE, topic):
             ack.code = 0x81
 
         elif not topic in client.topics:
@@ -324,6 +331,76 @@ class Server:
             self.logger.debug(f"{client} unsubscribed from {topic}")
         
         client.send(ack)
+    
+    def check_auth(self, client, scope, *args):
+        """Checks user rights in `scope`
+
+        Arguments:
+            client {Client} -- The client
+            scope {int} -- Message type
+
+        Returns:
+            bool -- True if the client is authorized in this scope
+        
+        Todo:
+            * Write the function
+        """
+
+        user = self.config.get_user(client.username, client.password)
+
+        if scope == CONNECT:
+            if not self.config.require_auth:
+                return True
+            
+            if user:
+                return True
+            
+            return False
+        
+        elif scope == PUBLISH:
+            pub_topic = args[0]
+
+            if not user or not client.connected:
+                return False
+            
+            auth = True
+            topics = list(self.config.topics.items())
+            topics += list(user["topics"].items())
+
+            for topic, rights in topics:
+                if self.topic_match(topic, pub_topic):
+                    if "!pub" in rights:
+                        auth = False
+                    
+                    elif "pub" in rights:
+                        auth = True
+
+            return auth
+        
+        elif scope == SUBSCRIBE:
+            sub_topic = args[0]
+
+            if not user or not client.connected:
+                return False
+            
+            auth = True
+            topics = list(self.config.topics.items())
+            topics += list(user["topics"].items())
+
+            for topic, rights in topics:
+                if self.topic_match(topic, sub_topic):
+                    if "!sub" in rights:
+                        auth = False
+                    
+                    elif "sub" in rights:
+                        auth = True
+
+            return auth
+        
+        elif scope == UNSUBSCRIBE:
+            return True
+
+        raise NotImplementedError(f"{type_name(scope)} is not a scope")
 
 class Client:
     """Represents a client"""
@@ -339,6 +416,7 @@ class Client:
         self.socket = sock
         self.username = None
         self.password = None
+        self.connected = False
         self.topics = []
         self.id = id_
     
@@ -353,21 +431,6 @@ class Client:
         """
 
         self.socket.sendall(msg.to_bytes())
-    
-    def check_auth(self, scope, *args):
-        """Checks user rights in `scope`
-
-        Arguments:
-            scope {int} -- Message type
-
-        Returns:
-            bool -- True if the client is authorized in this scope
-        
-        Todo:
-            * Write the function
-        """
-        
-        return True
 
 if __name__ == "__main__":
     import threading

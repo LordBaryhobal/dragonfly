@@ -45,7 +45,7 @@ def type_name(type_):
     if type_ in range(len(_type_names)):
         return _type_names[type_]
     
-    return "UNKNOWN-TYPE"
+    return f"UNKNOWN-TYPE ({type_})"
 
 class MessageType:
     def __init__(self, byte):
