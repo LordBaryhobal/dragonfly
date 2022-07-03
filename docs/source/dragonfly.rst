@@ -4,51 +4,66 @@ dragonfly package
 Submodules
 ----------
 
-dragonfly\.bytes module
------------------------
+dragonfly.bytes module
+----------------------
 
 .. automodule:: dragonfly.bytes
-    :members:
-    :undoc-members:
-    :show-inheritance:
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
-dragonfly\.client module
-------------------------
+dragonfly.client module
+-----------------------
 
 .. automodule:: dragonfly.client
-    :members:
-    :undoc-members:
-    :show-inheritance:
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
-dragonfly\.logger module
-------------------------
+dragonfly.config module
+-----------------------
+
+.. automodule:: dragonfly.config
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+dragonfly.exceptions module
+---------------------------
+
+.. automodule:: dragonfly.exceptions
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+dragonfly.logger module
+-----------------------
 
 .. automodule:: dragonfly.logger
-    :members:
-    :undoc-members:
-    :show-inheritance:
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
-dragonfly\.message module
--------------------------
-
-.. automodule:: dragonfly.message
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-dragonfly\.server module
+dragonfly.message module
 ------------------------
 
-.. automodule:: dragonfly.server
-    :members:
-    :undoc-members:
-    :show-inheritance:
+.. automodule:: dragonfly.message
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
+dragonfly.server module
+-----------------------
+
+.. automodule:: dragonfly.server
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 Module contents
 ---------------
 
 .. automodule:: dragonfly
-    :members:
-    :undoc-members:
-    :show-inheritance:
+   :members:
+   :undoc-members:
+   :show-inheritance:
