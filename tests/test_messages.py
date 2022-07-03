@@ -251,4 +251,4 @@ class TestMessageEncoding(unittest.TestCase):
 
 class TestMisc(unittest.TestCase):
     def test_type_name_unknown(self):
-        self.assertEqual(type_name(42), "UNKNOWN-TYPE")
+        self.assertEqual(type_name(42), "UNKNOWN-TYPE (42)")
