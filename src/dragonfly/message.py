@@ -71,11 +71,14 @@ class Message:
     def __init__(self, origin=ORIGIN_SERVER, type_=CONNECT, flags=0, **kwargs):
         """Initializes a Message instance
 
-        Keyword Arguments:
-            origin {int} -- The message's origin, either ORIGIN_SERVER or ORIGIN_CLIENT (default: {ORIGIN_SERVER})
-            type_ {int} -- The message's type, one of [CONNECT, CONNECTED, PUBLISH, PUBLISHED, SUBSCRIBE, SUBSCRIBED, UNSUBSCRIBE, UNSUBSCRIBED] (default: {CONNECT})
-            flags {int} -- The message's flags (default: {0})
-            **kwargs: additional message properties
+        Args:
+            origin (int, optional): The message's origin, either ORIGIN_SERVER
+                or ORIGIN_CLIENT. Defaults to ORIGIN_SERVER.
+            type_ (int, optional): The message's type, one of [CONNECT, CONNECTED,
+                PUBLISH, PUBLISHED, SUBSCRIBE, SUBSCRIBED, UNSUBSCRIBE,
+                UNSUBSCRIBED]. Defaults to CONNECT.
+            flags (int, optional): The message's flags. Default to 0.
+            **kwargs: Additional message properties.
         """
 
         self.bytes = b""
@@ -91,11 +94,11 @@ class Message:
     def from_bytes(self, bytes_):
         """Parses a message from bytes
 
-        Arguments:
-            bytes_ {bytes} -- The message's bytes
+        Args:
+            bytes_ (bytes): The message's bytes.
         
         Returns:
-            bool -- wether the message has been successfully decoded
+            True if the message has been successfully decoded, False otherwise.
         """
 
         try:
@@ -149,7 +152,7 @@ class Message:
         """Formats the message to bytes
 
         Returns:
-            bytes -- The message's bytes
+            bytes: The message's bytes.
         """
 
         bytes_ = b""
@@ -221,11 +224,11 @@ class Message:
         length.
         Strings are decoded in UTF-8
 
-        Arguments:
-            stream {ByteStream} -- Input stream
+        Args:
+            stream (ByteStream): Input stream.
 
         Returns:
-            str -- Decoded string
+            The decoded string.
         """
 
         length = struct.unpack(">H", stream.read(2))[0]
@@ -238,11 +241,11 @@ class Message:
         length.
         Strings are encoded in UTF-8
 
-        Arguments:
-            string {str} -- String to encode
+        Args:
+            string (str): The string to encode.
 
         Returns:
-            bytes -- Encoded string
+            bytes: The encoded string or None if ``string`` is empty.
         """
 
         if string is None: string = ""

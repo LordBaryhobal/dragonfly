@@ -23,8 +23,8 @@ class ByteStream:
     def __init__(self, bytes_=b""):
         """Initializes a ByteStream instance
 
-        Keyword Arguments:
-            bytes_ {bytes} -- Bytes string (default: {b""})
+        Args:
+            bytes_ (bytes, optional): The bytes string. Defaults to b"".
         """
 
         self.bytes = bytes_
@@ -39,13 +39,12 @@ class ByteStream:
         """Changes stream position
 
         Changes the stream position to the given byte offset. The offset is
-        interpreted relative to the position indicated by `anchor`.
+        interpreted relative to the position indicated by ``anchor``.
 
-        Arguments:
-            offset {int} -- Byte offset
-
-        Keyword Arguments:
-            anchor {int} -- Offset anchor, 0: start / 1: current / 2: end (default: {0})
+        Args:
+            offset (int): The byte offset.
+            anchor (int, optional): The offset anchor. Defaults to 0.
+                0: start / 1: current / 2: end
         """
 
         if anchor == 0:
@@ -62,11 +61,11 @@ class ByteStream:
     def read(self, count=-1):
         """Reads a certain amount of bytes from the stream
 
-        Arguments:
-            count {int} -- Number of bytes to read
+        Args:
+            count (int): The number of bytes to read.
 
         Returns:
-            bytes -- Bytes read
+            bytes: Bytes read.
         """
 
         if count == -1:

@@ -38,9 +38,9 @@ class Client:
     def __init__(self, username=None, password=None):
         """Initializes a Client instance
 
-        Keyword Arguments:
-            username {str} -- The client's username (default: {None})
-            password {str} -- The client's password (default: {None})
+        Args:
+            username (str, optional): The client's username. Defaults to None.
+            password (str, optional): The client's password. Defaults to None.
         """
 
         self.username = username
@@ -62,9 +62,9 @@ class Client:
     def connect(self, host="localhost", port=1869):
         """Connects to a server and starts listening
 
-        Keyword Arguments:
-            host {str} -- The server's host (default: {"localhost"})
-            port {int} -- The server's port (default: {1869})
+        Args:
+            host (str, optional): The server's host. Defaults to "localhost".
+            port (int, optional): The server's port. Defaults to 1869.
         """
 
         self.state = State.STARTING
@@ -87,8 +87,8 @@ class Client:
         
     def disconnect(self):
         """Stops this client"""
-        self.state = State.STOPPING
 
+        self.state = State.STOPPING
         self.send(Message(ORIGIN_CLIENT, CONNECT, 4)) # Disconnect
         self.thread.join()
     
@@ -110,8 +110,8 @@ class Client:
     def send(self, msg):
         """Sends a message throught the socket
 
-        Arguments:
-            msg {Message} -- Message to send
+        Args:
+            msg (Message): The message to send.
         """
         
         self.socket.sendall(msg.to_bytes())
@@ -119,9 +119,9 @@ class Client:
     def handle_msg(self, key, mask):
         """Handles an event
 
-        Arguments:
-            key {selectors.SelectorKey} -- The event's key
-            mask {selectors._EventMask} -- The event's mask
+        Args:
+            key (selectors.SelectorKey): The event's key.
+            mask (selectors._EventMask): The event's mask.
         """
 
         sock = key.fileobj
@@ -163,8 +163,8 @@ class Client:
     def process_msg(self, msg):
         """Processes a message
 
-        Arguments:
-            msg {Message} -- The message instance
+        Args:
+            msg (Message): The message instance.
         """
 
         t = msg.type
@@ -200,31 +200,49 @@ class Client:
     """
 
     def subscribe(self, topic):
+        """Subscribes to a topic
+
+        Args:
+            topic (str): The topic.
+        """
+
         self.send(Message(ORIGIN_CLIENT, SUBSCRIBE, topic=topic))
     
     def unsubscribe(self, topic):
+        """Unsubscribes from a topic
+
+        Args:
+            topic (str): The topic.
+        """
+
         self.send(Message(ORIGIN_CLIENT, UNSUBSCRIBE, topic=topic))
     
     def publish(self, topic, msg):
+        """Publishes a message to a topic
+
+        Args:
+            topic (str): The topic to publish to.
+            msg (Message): The message to publish.
+        """
+
         self.send(Message(ORIGIN_CLIENT, PUBLISH, topic=topic, body=msg))
 
-
-def on_c(self, code):
-    self.logger.info(f"Connected {code}")
-
-def on_p(self, code):
-    self.logger.info(f"Published {code}")
-
-def on_s(self, code):
-    self.logger.info(f"Subscribed {code}")
-
-def on_u(self, code):
-    self.logger.info(f"Unsubscribed {code}")
-
-def on_m(self, topic, msg):
-    self.logger.info(f"Message in {topic}: {msg}")
-
 if __name__ == "__main__":
+    def on_c(self, code):
+        self.logger.info(f"Connected {code}")
+
+    def on_p(self, code):
+        self.logger.info(f"Published {code}")
+
+    def on_s(self, code):
+        self.logger.info(f"Subscribed {code}")
+
+    def on_u(self, code):
+        self.logger.info(f"Unsubscribed {code}")
+
+    def on_m(self, topic, msg):
+        self.logger.info(f"Message in {topic}: {msg}")
+
     username = "Baryhobal"
     password = "123456789"
 

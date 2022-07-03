@@ -19,7 +19,17 @@
 import re
 
 class Config:
+    """Server configuration manager"""
+
     def __init__(self, path=None):
+        """Initializes a Config instance
+
+        Args:
+            path (str, optional): The config file's path. Defaults to None.
+                If not None, the configuration is automatically loaded.
+                To manually load the config from a path, see :py:meth:`load`.
+        """
+
         self._config = {}
         self._path = path
 
@@ -27,6 +37,25 @@ class Config:
             self.load(self._path)
 
     def parse_arg(self, arg):
+        """Parses a config argument
+
+        Supported types are:
+            * string: any group of characters which does not belong to another
+                type
+            * boolean: true/false (case insensitive)
+            * null: null value (case insensitive)
+            * hex, oct, bin: 0x..., 0o..., 0b... (case insensitive)
+            * integer: any integer value
+            * float: any floating-point value
+            * lists: '|' separated list of values, e.g. a|b|c
+
+        Args:
+            arg (str): The argument to parse.
+
+        Returns:
+            The parsed argument.
+        """
+
         if isinstance(arg, list):
             return list(map(self.parse_arg, arg))
         
@@ -64,6 +93,12 @@ class Config:
         return arg
 
     def load(self, path):
+        """Loads configuration from a file
+
+        Args:
+            path (str): The config file's path.
+        """
+
         self._path = path
         with open(path, "r") as f:
             lines = f.read().split("\n")
@@ -128,6 +163,17 @@ class Config:
         self._config = config
     
     def get_user(self, username, password):
+        """Gets a user from the list of configured users
+
+        Args:
+            username (str): The user's name.
+            password (str): The user's password.
+
+        Returns:
+            The user's configuration if found.
+            None if no user is configured or no user matches
+        """
+
         if not self.users:
             return None
         

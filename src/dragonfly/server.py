@@ -40,9 +40,10 @@ class Server:
     def __init__(self, host="localhost", port=1869, config=None):
         """Initializes a Server instance
 
-        Keyword Arguments:
-            host {str} -- Socket host (default: {"localhost"})
-            port {int} -- Socket port (default: {1869})
+        Args:
+            host (str, optional): Socket host. Defaults to "localhost".
+            port (int, optional): Socket port. Defaults to 1869.
+            config (str, optional): Path to config file. Defaults to None.
         """
 
         self.config_path = config
@@ -96,8 +97,8 @@ class Server:
     def new_conn(self, sock):
         """Accepts a new connection
 
-        Arguments:
-            sock {socket.socket} -- incoming socket connection
+        Args:
+            sock (socket.socket): The incoming socket connection.
         """
 
         conn, addr = sock.accept()
@@ -111,8 +112,8 @@ class Server:
     def close_conn(self, id_):
         """Closes a previously established connection
 
-        Arguments:
-            id_ {int} -- Client id
+        Args:
+            id_ (int): The client's id.
         """
 
         client = self.clients[id_]
@@ -124,9 +125,9 @@ class Server:
     def handle_msg(self, key, mask):
         """Handles an event
 
-        Arguments:
-            key {selectors.SelectorKey} -- The event's key
-            mask {selectors._EventMask} -- The event's mask
+        Args:
+            key (selectors.SelectorKey): The event's key.
+            mask (selectors._EventMask): The event's mask.
         """
 
         sock = key.fileobj
@@ -164,11 +165,11 @@ class Server:
     def new_client(self, sock):
         """Registers new client
 
-        Arguments:
-            sock {socket.socket} -- Client socket
+        Args:
+            sock (socket.socket): The client socket.
 
         Returns:
-            Client -- The new client instance
+            Client: The new client instance.
         """
 
         if not None in self.clients:
@@ -183,8 +184,8 @@ class Server:
     def remove_client(self, id_):
         """Unregisters a client
 
-        Arguments:
-            id_ {int} -- The client's id
+        Args:
+            id_ (int): The client's id.
         """
 
         client = self.clients[id_]
@@ -196,9 +197,9 @@ class Server:
     def process_msg(self, msg, sender):
         """Processes a message
 
-        Arguments:
-            msg {Message} -- The message instance
-            sender {Client} -- The sender client
+        Args:
+            msg (Message): The message instance.
+            sender (Client): The sender client.
         """
 
         t = msg.type
@@ -235,9 +236,9 @@ class Server:
     def publish(self, msg, sender):
         """Processes a PUBLISH message
 
-        Arguments:
-            msg {Message} -- The PUBLISH message
-            sender {Client} -- The sender client
+        Args:
+            msg (Message): The PUBLISH message.
+            sender (Client): The sender client.
         """
 
         ack = Message(ORIGIN_SERVER, PUBLISHED)
@@ -261,12 +262,12 @@ class Server:
     def topic_match(self, pattern, topic):
         """Returns wether `topic` matches `pattern`
 
-        Arguments:
-            pattern {str} -- Topic pattern
-            topic {str} -- Topic to match
+        Args:
+            pattern (str): Topic pattern.
+            topic (str): Topic to match.
 
         Returns:
-            bool -- True if topic matches
+            bool: True if topic matches, False otherwise.
         """
 
         return bool(re.match(pattern, topic))
@@ -274,9 +275,9 @@ class Server:
     def subscribe(self, msg, client):
         """Processes a SUBSCRIBE message
 
-        Arguments:
-            msg {Message} -- The SUBSCRIBE message
-            sender {Client} -- The sender client
+        Args:
+            msg (Message): The SUBSCRIBE message.
+            sender (Client): The sender client.
         """
 
         topic = msg.topic
@@ -304,9 +305,9 @@ class Server:
     def unsubscribe(self, msg, client):
         """Processes a UNSUBSCRIBE message
 
-        Arguments:
-            msg {Message} -- The UNSUBSCRIBE message
-            sender {Client} -- The sender client
+        Args:
+            msg (Message): The UNSUBSCRIBE message.
+            sender (Client): The sender client.
         """
 
         topic = msg.topic
@@ -335,12 +336,16 @@ class Server:
     def check_auth(self, client, scope, *args):
         """Checks user rights in `scope`
 
-        Arguments:
-            client {Client} -- The client
-            scope {int} -- Message type
+        Args:
+            client (Client): The client.
+            scope (int): Message type.
 
         Returns:
-            bool -- True if the client is authorized in this scope
+            True if the client is authorized in this scope, False otherwise.
+        
+        Raises:
+            NotImplementedError: If ``scope`` is not a scope with rights or is
+                not a valid scope.
         """
 
         user = self.config.get_user(client.username, client.password)
@@ -409,9 +414,9 @@ class Client:
     def __init__(self, sock, id_):
         """Initializes a Client instance
 
-        Arguments:
-            sock {socket.socket} -- The client socket
-            id_ {int} -- The client's id (see Server#new_client)
+        Args:
+            sock (socket.socket): The client socket.
+            id_ (int): The client's id (see :py:meth:`Server.new_client`).
         """
 
         self.socket = sock
@@ -427,8 +432,8 @@ class Client:
     def send(self, msg):
         """Sends a message through the socket
 
-        Arguments:
-            msg {Message} -- Message to send
+        Args:
+            msg (Message): The message to send.
         """
 
         self.socket.sendall(msg.to_bytes())

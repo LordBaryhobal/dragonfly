@@ -18,10 +18,19 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import logging
 
-FORMAT = "[%(asctime)s][%(levelname)s] %(message)s"
-DATEFMT = "%Y-%m-%d %H:%M:%S"
+FORMAT = "[%(asctime)s][%(levelname)s] %(message)s"  #: Logging format
+DATEFMT = "%Y-%m-%d %H:%M:%S"  #: Logging date format
 
 class ColorFormatter(logging.Formatter):
+    """Logging formatter to colorize output
+
+    * Critical: bold red
+    * Error: red
+    * Warning: yellow
+    * Info: grey
+    * Debug: italic magenta
+    """
+
     italic_magenta = "\x1b[95;3m"
     grey = "\x1b[37m"
     yellow = "\x1b[33m"
@@ -48,6 +57,12 @@ class ColorFormatter(logging.Formatter):
         return formatter.format(record)
 
 def setup():
+    """Sets up logging for the module
+
+    Sets up a ColorFormatter for console logging using :py:const:`FORMAT` and
+    :py:const:`DATEFMT`.
+    """
+
     logger = logging.getLogger("dragonfly")
     logger.setLevel(logging.DEBUG)
     ch = logging.StreamHandler()
