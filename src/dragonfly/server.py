@@ -341,9 +341,6 @@ class Server:
 
         Returns:
             bool -- True if the client is authorized in this scope
-        
-        Todo:
-            * Write the function
         """
 
         user = self.config.get_user(client.username, client.password)
