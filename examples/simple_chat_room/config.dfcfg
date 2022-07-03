@@ -1,0 +1,16 @@
+# General
+require_auth	true
+topic		chat	!sub|!pub
+
+# User
+username	admin
+password	1234
+topic		chat	sub|pub
+
+# User
+username	louis
+topic		chat	sub
+
+# User
+username	patrick
+topic		chat	pub

@@ -1,10 +1,10 @@
 from dragonfly.server import Server
-from dragonfly.logger import Logger, LogType
+from dragonfly.logger import setup
 import threading
 
-Logger.setup(LogType.INFO|LogType.WARN|LogType.ERROR)
+setup()
 
-server = Server()
+server = Server(config="config.dfcfg")
 
 t = threading.Thread(target=server.start, daemon=True)
 t.start()
