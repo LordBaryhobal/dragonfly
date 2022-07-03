@@ -360,12 +360,14 @@ class Server:
         elif scope == PUBLISH:
             pub_topic = args[0]
 
-            if not user or not client.connected:
+            if not client.connected:
                 return False
             
             auth = True
             topics = list(self.config.topics.items())
-            topics += list(user["topics"].items())
+
+            if user:
+                topics += list(user["topics"].items())
 
             for topic, rights in topics:
                 if self.topic_match(topic, pub_topic):
@@ -380,12 +382,14 @@ class Server:
         elif scope == SUBSCRIBE:
             sub_topic = args[0]
 
-            if not user or not client.connected:
+            if not client.connected:
                 return False
             
             auth = True
             topics = list(self.config.topics.items())
-            topics += list(user["topics"].items())
+
+            if user:
+                topics += list(user["topics"].items())
 
             for topic, rights in topics:
                 if self.topic_match(topic, sub_topic):
