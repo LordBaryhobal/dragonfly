@@ -4,6 +4,8 @@
   <img src="dragonfly.png?raw=true" alt="dragonfly logo white" width="80" height="80">
 </p>
 
+![coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/LordBaryhobal/4ba9d787d865bc292647f6acc33ca5ca/raw/4973294cf44531a194548dc7207ce269676a8ef1/dragonfly_coverage.json)
+
 Dragonfly is an mqtt-like communication protocol. This library includes a server and a client
 
 ## Installation
