@@ -1,5 +1,9 @@
 # Dragonfly
 
+<p align="center">
+  <img src="dragonfly.png?raw=true" alt="dragonfly logo white" width="80" height="80">
+</p>
+
 Dragonfly is an mqtt-like communication protocol. This library includes a server and a client
 
 ## Installation
