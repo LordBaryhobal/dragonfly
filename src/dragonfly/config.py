@@ -36,6 +36,7 @@ class Config:
         if self._path:
             self.load(self._path)
 
+    # pylint: disable=too-many-return-statements
     def parse_arg(self, arg):
         """Parses a config argument
 
@@ -58,38 +59,38 @@ class Config:
 
         if isinstance(arg, list):
             return list(map(self.parse_arg, arg))
-        
-        elif "|" in arg:
+
+        if "|" in arg:
             return self.parse_arg(arg.split("|"))
-        
+
         if arg.lower() == "true":
             return True
-        
-        elif arg.lower() == "false":
+
+        if arg.lower() == "false":
             return False
-        
-        elif arg.lower() == "null":
+
+        if arg.lower() == "null":
             return None
-        
-        elif arg.lower().startswith("0x"):
+
+        if arg.lower().startswith("0x"):
             return int(arg[2:], 16)
-        
-        elif arg.lower().startswith("0o"):
+
+        if arg.lower().startswith("0o"):
             return int(arg[2:], 8)
-        
-        elif arg.lower().startswith("0b"):
+
+        if arg.lower().startswith("0b"):
             return int(arg[2:], 2)
-        
+
         try:
             arg = int(arg)
-        
-        except:        
+
+        except ValueError:
             try:
                 arg = float(arg)
-            
-            except:
+
+            except ValueError:
                 pass
-        
+
         return arg
 
     def load(self, path):
@@ -100,68 +101,69 @@ class Config:
         """
 
         self._path = path
+
         with open(path, "r") as f:
             lines = f.read().split("\n")
-        
+
         config = {
             "users": []
         }
-        
+
         state = 0
         skipping = False
         type_ = None
-        elmt = None
-        
+        elmt = {}
+
         for line in lines:
             if line.lstrip().startswith("//"):
                 continue
-            
-            elif line.lstrip().startswith("/*"):
+
+            if line.lstrip().startswith("/*"):
                 skipping = True
-            
+
             elif line.rstrip().endswith("*/"):
                 skipping = False
-            
+
             if skipping:
                 continue
-            
+
             if state == 0:
                 match = re.match(r"^# (.*)$", line)
                 if match:
                     type_ = match.group(1).lower()
                     elmt = {}
                     state = 1
-            
+
             elif state == 1:
                 if not line.strip():
                     state = 0
                     if type_ == "general":
                         config.update(elmt)
-                    
+
                     elif type_ == "user":
                         config["users"].append(elmt)
-                    
-                    type_, elmt = None, None
+
+                    type_, elmt = None, {}
                     continue
-                
+
                 args = re.split(r"\s+", line)
                 args[0] = args[0].lower()
-                
+
                 if len(args) == 2:
                     elmt[args[0]] = self.parse_arg(args[1])
-                
+
                 elif len(args) > 2:
                     if args[0] == "topic":
                         if not "topics" in elmt:
                             elmt["topics"] = {}
-                        
+
                         elmt["topics"][args[1]] = self.parse_arg(args[2])
-                    
+
                     else:
                         elmt[args[0]] = self.parse_arg(args[1:])
-        
+
         self._config = config
-    
+
     def get_user(self, username, password):
         """Gets a user from the list of configured users
 
@@ -176,16 +178,16 @@ class Config:
 
         if not self.users:
             return None
-        
+
         for user in self.users:
             if str(user["username"]) == username:
                 if user.get("password") is None or str(user["password"]) == password:
                     return user
-        
+
         return None
 
     def __getattr__(self, __name):
         if __name in self._config:
             return self._config[__name]
-        
+
         return None

@@ -29,12 +29,12 @@ class ByteStream:
 
         self.bytes = bytes_
         self.pos = 0
-    
+
     def clamp(self):
         """Clamps the cursor's position to stay within the content's boundaries"""
 
         self.pos = min(len(self.bytes), max(0, self.pos))
-    
+
     def seek(self, offset, anchor=0):
         """Changes stream position
 
@@ -49,15 +49,15 @@ class ByteStream:
 
         if anchor == 0:
             self.pos = offset
-        
+
         elif anchor == 1:
             self.pos += offset
-        
+
         else:
             self.pos = len(self.bytes) + offset
-        
+
         self.clamp()
-    
+
     def read(self, count=-1):
         """Reads a certain amount of bytes from the stream
 
@@ -71,11 +71,11 @@ class ByteStream:
         if count == -1:
             bytes_ = self.bytes[self.pos:]
             self.pos = len(self.bytes)
-        
+
         else:
             bytes_ = self.bytes[self.pos:self.pos+count]
             self.pos += count
-        
+
         self.clamp()
 
         return bytes_

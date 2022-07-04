@@ -26,6 +26,8 @@ import types
 from dragonfly.message import *
 
 class State(IntEnum):
+    """Client state enum"""
+
     STOPPED = auto()
     STARTING = auto()
     RUNNING = auto()
@@ -58,7 +60,7 @@ class Client:
         self.on_message = lambda self, topic, msg: None
 
         self.logger = logging.getLogger("dragonfly")
-    
+
     def connect(self, host="localhost", port=1869):
         """Connects to a server and starts listening
 
@@ -84,20 +86,20 @@ class Client:
 
         self.thread = Thread(target=self.mainloop, daemon=True)
         self.thread.start()
-        
+
     def disconnect(self):
         """Stops this client"""
 
         self.state = State.STOPPING
         self.send(Message(ORIGIN_CLIENT, CONNECT, 4)) # Disconnect
         self.thread.join()
-    
+
     def disconnected(self):
         """Closes the socket"""
 
         self.socket.close()
         self.state = State.STOPPED
-    
+
     def mainloop(self):
         """Main event loop"""
 
@@ -113,9 +115,9 @@ class Client:
         Args:
             msg (Message): The message to send.
         """
-        
+
         self.socket.sendall(msg.to_bytes())
-    
+
     def handle_msg(self, key, mask):
         """Handles an event
 
@@ -130,11 +132,11 @@ class Client:
         # Ready to read
         if mask & selectors.EVENT_READ:
             recv_data = sock.recv(data.length if data.step == 1 else 7)
-            
+
             if recv_data:
                 data.outb += recv_data
                 data.step += 1
-                
+
                 if data.step == 1:
                     data.length = struct.unpack(">I", data.outb[-4:])[0]
                     if data.length == 0:
@@ -144,18 +146,18 @@ class Client:
                     msg = Message()
                     try:
                         msg.from_bytes(data.outb)
-                    
+
                     except:
-                        self.logger.warn(f"Malformed packet from {data.addr}")
-                    
+                        self.logger.warn("Malformed packet from %s", data.addr)
+
                     else:
-                        self.logger.debug(f"Received {msg} from {data.addr}")
+                        self.logger.debug("Received %s from %s", msg, data.addr)
                         self.process_msg(msg)
-                    
+
                     finally:
                         data.step = 0
                         data.outb = b""
-        
+
         # Ready to write
         if mask & selectors.EVENT_WRITE:
             pass
@@ -167,37 +169,37 @@ class Client:
             msg (Message): The message instance.
         """
 
-        t = msg.type
-        if t.origin == ORIGIN_SERVER:
-            if t.type == CONNECTED:
+        msg_type = msg.type
+        if msg_type.origin == ORIGIN_SERVER:
+            if msg_type.type == CONNECTED:
                 code = msg.code
 
-                if t.flags & 4:
+                if msg_type.flags & 4:
                     self.disconnected()
                     self.on_disconnected(self, code)
-                
+
                 else:
                     self.on_connected(self, code)
-            
-            elif t.type == PUBLISHED:
+
+            elif msg_type.type == PUBLISHED:
                 code = msg.code
                 self.on_published(self, code)
-            
-            elif t.type == SUBSCRIBED:
+
+            elif msg_type.type == SUBSCRIBED:
                 code = msg.code
                 self.on_subscribed(self, code)
-            
-            elif t.type == UNSUBSCRIBED:
+
+            elif msg_type.type == UNSUBSCRIBED:
                 code = msg.code
                 self.on_unsubscribed(self, code)
-            
-            elif t.type == PUBLISH:
+
+            elif msg_type.type == PUBLISH:
                 topic, body = msg.topic, msg.body
                 self.on_message(self, topic, body)
-    
-    """
-    Public api
-    """
+
+    #
+    # Public api
+    #
 
     def subscribe(self, topic):
         """Subscribes to a topic
@@ -207,7 +209,7 @@ class Client:
         """
 
         self.send(Message(ORIGIN_CLIENT, SUBSCRIBE, topic=topic))
-    
+
     def unsubscribe(self, topic):
         """Unsubscribes from a topic
 
@@ -216,7 +218,7 @@ class Client:
         """
 
         self.send(Message(ORIGIN_CLIENT, UNSUBSCRIBE, topic=topic))
-    
+
     def publish(self, topic, msg):
         """Publishes a message to a topic
 
@@ -228,6 +230,7 @@ class Client:
         self.send(Message(ORIGIN_CLIENT, PUBLISH, topic=topic, body=msg))
 
 if __name__ == "__main__":
+    # pylint: disable=missing-function-docstring
     def on_c(self, code):
         self.logger.info(f"Connected {code}")
 
@@ -254,34 +257,35 @@ if __name__ == "__main__":
     client.on_subscribed = on_s
     client.on_unsubscribed = on_u
     client.on_message = on_m
-    
+
     client.subscribe("test")
     input(">")
 
     client.subscribe("test")
     input(">")
-    
+
     client.publish("test", "Essai")
     input(">")
-    
+
     client.publish("essai", "Essai")
     input(">")
-    
+
     client.unsubscribe("test")
     input(">")
-    
+
     client.unsubscribe("test")
     input(">")
 
     client.publish("test", "Essai")
     input(">")
 
+    # pylint: disable=pointless-string-statement
     """
     sub = Message(ORIGIN_CLIENT, SUBSCRIBE)
     sub.topic = "test"
     client.send(sub)
     input(">")
-    
+
     client.send(sub)
     input(">")
 

@@ -25,9 +25,14 @@ import struct
 import types
 
 from dragonfly.config import Config
-from dragonfly.message import *
+from dragonfly.message import ORIGIN_SERVER, ORIGIN_CLIENT
+from dragonfly.message import CONNECT, PUBLISH, SUBSCRIBE, UNSUBSCRIBE
+from dragonfly.message import CONNECTED, PUBLISHED, SUBSCRIBED, UNSUBSCRIBED
+from dragonfly.message import Message, type_name
 
 class State(IntEnum):
+    """Server state enum"""
+
     STOPPED = auto()
     STARTING = auto()
     RUNNING = auto()
@@ -48,7 +53,7 @@ class Server:
 
         self.config_path = config
         self.config = Config(self.config_path)
-        
+
         self.host = host
         self.port = port
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -58,7 +63,7 @@ class Server:
         self.topics = {}
         self.state = State.STOPPED
         self.logger = logging.getLogger("dragonfly")
-    
+
     def start(self):
         """Starts this server"""
 
@@ -67,18 +72,18 @@ class Server:
         self.socket.listen()
         self.socket.setblocking(False)
         self.selector.register(self.socket, selectors.EVENT_READ, data=None)
-        self.logger.info(f"Dragonfly server listening on {(self.host, self.port)}")
+        self.logger.info("Dragonfly server listening on ('%s', %d)", self.host, self.port)
         self.state = State.RUNNING
 
         self.mainloop()
-    
+
     def stop(self):
         """Closes this server's socket"""
 
         self.state = State.STOPPING
         self.socket.close()
         self.state = State.STOPPED
-    
+
     def mainloop(self):
         """Main event loop"""
 
@@ -89,7 +94,7 @@ class Server:
                 # Listening socket
                 if key.data is None:
                     self.new_conn(key.fileobj)
-                
+
                 # Data
                 else:
                     self.handle_msg(key, mask)
@@ -103,7 +108,7 @@ class Server:
 
         conn, addr = sock.accept()
         client = self.new_client(conn)
-        self.logger.debug(f"Accepted connection from {addr}")
+        self.logger.debug("Accepted connection from %s", (addr, ))
         conn.setblocking(False)
         data = types.SimpleNamespace(addr=addr, inb=b"", outb=b"", step=0, length=0, id=client.id)
         events = selectors.EVENT_READ | selectors.EVENT_WRITE
@@ -117,7 +122,7 @@ class Server:
         """
 
         client = self.clients[id_]
-        self.logger.debug(f"Closing connection {client.socket.getpeername()}")
+        self.logger.debug("Closing connection %s", client.socket.getpeername())
         self.selector.unregister(client.socket)
         client.socket.close()
         self.remove_client(id_)
@@ -136,11 +141,11 @@ class Server:
         # Ready to read
         if mask & selectors.EVENT_READ:
             recv_data = sock.recv(data.length if data.step == 1 else 7)
-            
+
             if recv_data:
                 data.outb += recv_data
                 data.step += 1
-                
+
                 if data.step == 1:
                     data.length = struct.unpack(">I", data.outb[-4:])[0]
                     if data.length == 0:
@@ -149,19 +154,19 @@ class Server:
                 if data.step == 2:
                     msg = Message()
                     if msg.from_bytes(data.outb):
-                        self.logger.debug(f"Received {msg} from {data.addr}")
+                        self.logger.debug("Received %s from %s", msg, data.addr)
                         self.process_msg(msg, self.clients[data.id])
-                    
+
                     data.step = 0
                     data.outb = b""
-            
+
             else:
                 self.close_conn(data.id)
-        
+
         # Ready to write
         if mask & selectors.EVENT_WRITE:
             pass
-    
+
     def new_client(self, sock):
         """Registers new client
 
@@ -174,7 +179,7 @@ class Server:
 
         if not None in self.clients:
             self.clients.append(None)
-        
+
         id_ = self.clients.index(None)
         client = Client(sock, id_)
         self.clients[id_] = client
@@ -191,9 +196,9 @@ class Server:
         client = self.clients[id_]
         for topic in client.topics:
             self.topics[topic].remove(id_)
-        
+
         self.clients[id_] = None
-    
+
     def process_msg(self, msg, sender):
         """Processes a message
 
@@ -202,37 +207,37 @@ class Server:
             sender (Client): The sender client.
         """
 
-        t = msg.type
-        if t.origin == ORIGIN_CLIENT:
-            if t.type == CONNECT:
-                if t.flags & 4:
+        type_ = msg.type
+        if type_.origin == ORIGIN_CLIENT:
+            if type_.type == CONNECT:
+                if type_.flags & 4:
                     sender.send(Message(ORIGIN_SERVER, CONNECTED, 4, code=0x00))
                     self.close_conn(sender.id)
-                
+
                 else:
                     sender.username = msg.username
                     sender.password = msg.password
-                    
+
                     ack = Message(ORIGIN_SERVER, CONNECTED)
                     ack.code = 0x00
-                    
+
                     if not self.check_auth(sender, CONNECT):
                         ack.code = 0x81
-                    
+
                     else:
                         sender.connected = True
-                    
+
                     sender.send(ack)
-            
-            elif t.type == PUBLISH:
+
+            elif type_.type == PUBLISH:
                 self.publish(msg, sender)
-            
-            elif t.type == SUBSCRIBE:
+
+            elif type_.type == SUBSCRIBE:
                 self.subscribe(msg, sender)
-            
-            elif t.type == UNSUBSCRIBE:
+
+            elif type_.type == UNSUBSCRIBE:
                 self.unsubscribe(msg, sender)
-    
+
     def publish(self, msg, sender):
         """Processes a PUBLISH message
 
@@ -248,17 +253,17 @@ class Server:
             ack.code = 0x81
 
         else:
-            self.logger.debug(f"{sender} published {msg.body} to {msg.topic}")
+            self.logger.debug("%s published '%s' to '%s'", sender, msg.body, msg.topic)
             for topic, ids in self.topics.items():
                 if self.topic_match(topic, msg.topic):
                     for id_ in ids:
                         client = self.clients[id_]
                         msg.type.origin = ORIGIN_SERVER
                         client.send(msg)
-                        self.logger.debug(f"Relaying to {client}")
-        
+                        self.logger.debug("Relaying to %s", (client, ))
+
         sender.send(ack)
-    
+
     def topic_match(self, pattern, topic):
         """Returns wether `topic` matches `pattern`
 
@@ -271,7 +276,7 @@ class Server:
         """
 
         return bool(re.match(pattern, topic))
-    
+
     def subscribe(self, msg, client):
         """Processes a SUBSCRIBE message
 
@@ -281,7 +286,7 @@ class Server:
         """
 
         topic = msg.topic
-        
+
         ack = Message(ORIGIN_SERVER, SUBSCRIBED)
         ack.code = 0x00
 
@@ -290,18 +295,18 @@ class Server:
 
         elif topic in client.topics:
             ack.code = 0x01
-        
+
         else:
             client.topics.append(topic)
             if not topic in self.topics:
                 self.topics[topic] = []
-                
+
             self.topics[topic].append(client.id)
 
-            self.logger.debug(f"{client} subscribed to {topic}")
-        
+            self.logger.debug("%s subscribed to '%s'", client, topic)
+
         client.send(ack)
-    
+
     def unsubscribe(self, msg, client):
         """Processes a UNSUBSCRIBE message
 
@@ -311,7 +316,7 @@ class Server:
         """
 
         topic = msg.topic
-        
+
         ack = Message(ORIGIN_SERVER, UNSUBSCRIBED)
         ack.code = 0x00
 
@@ -320,19 +325,19 @@ class Server:
 
         elif not topic in client.topics:
             ack.code = 0x01
-        
+
         else:
             client.topics.remove(topic)
-                
+
             self.topics[topic].remove(client.id)
 
             if len(self.topics[topic]) == 0:
                 del self.topics[topic]
 
-            self.logger.debug(f"{client} unsubscribed from {topic}")
-        
+            self.logger.debug("%s unsubscribed from '%s'", client, topic)
+
         client.send(ack)
-    
+
     def check_auth(self, client, scope, *args):
         """Checks user rights in `scope`
 
@@ -342,7 +347,7 @@ class Server:
 
         Returns:
             True if the client is authorized in this scope, False otherwise.
-        
+
         Raises:
             NotImplementedError: If ``scope`` is not a scope with rights or is
                 not a valid scope.
@@ -353,18 +358,18 @@ class Server:
         if scope == CONNECT:
             if not self.config.require_auth:
                 return True
-            
+
             if user:
                 return True
-            
+
             return False
-        
+
         elif scope == PUBLISH:
             pub_topic = args[0]
 
             if not client.connected:
                 return False
-            
+
             auth = True
             topics = list(self.config.topics.items())
 
@@ -375,18 +380,18 @@ class Server:
                 if self.topic_match(topic, pub_topic):
                     if "!pub" in rights:
                         auth = False
-                    
+
                     elif "pub" in rights:
                         auth = True
 
             return auth
-        
+
         elif scope == SUBSCRIBE:
             sub_topic = args[0]
 
             if not client.connected:
                 return False
-            
+
             auth = True
             topics = list(self.config.topics.items())
 
@@ -397,12 +402,12 @@ class Server:
                 if self.topic_match(topic, sub_topic):
                     if "!sub" in rights:
                         auth = False
-                    
+
                     elif "sub" in rights:
                         auth = True
 
             return auth
-        
+
         elif scope == UNSUBSCRIBE:
             return True
 
@@ -425,10 +430,10 @@ class Client:
         self.connected = False
         self.topics = []
         self.id = id_
-    
+
     def __repr__(self):
         return f"<Client {self.id} topics={self.topics}>"
-    
+
     def send(self, msg):
         """Sends a message through the socket
 
@@ -441,7 +446,7 @@ class Client:
 if __name__ == "__main__":
     import threading
     server = Server()
-    
+
     t = threading.Thread(target=server.start, daemon=True)
     t.start()
 

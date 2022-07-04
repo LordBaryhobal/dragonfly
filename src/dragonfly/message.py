@@ -39,29 +39,52 @@ FLAG_1 = 2
 FLAG_2 = 4
 FLAG_3 = 8
 
-_type_names = ["CONNECT", "CONNECTED", "PUBLISH", "PUBLISHED", "SUBSCRIBE", "SUBSCRIBED", "UNSUBSCRIBE", "UNSUBSCRIBED"]
+_type_names = [
+    "CONNECT", "CONNECTED", "PUBLISH", "PUBLISHED",
+    "SUBSCRIBE", "SUBSCRIBED", "UNSUBSCRIBE", "UNSUBSCRIBED"
+]
 
 def type_name(type_):
+    """Returns the name of a given message type
+
+    Args:
+        type_ (int): The message type.
+
+    Returns:
+        The corresponding name, if found, "UNKNOWN-TYPE (<type>)" otherwise.
+    """
+
     if type_ in range(len(_type_names)):
         return _type_names[type_]
-    
+
     return f"UNKNOWN-TYPE ({type_})"
 
 class MessageType:
+    """Message type
+
+    Contains information about origin, type and flags of the message.
+    """
+
     def __init__(self, byte):
         self.origin = (byte & 0x80) >> 7
         self.type = (byte & 0x70) >> 4
         self.flags = byte & 0x0f
-    
+
     def __repr__(self):
         return f"{self.origin} {type_name(self.type)} {self.flags:04b}"
-    
+
     def to_bytes(self):
-        n = (self.origin << 7) | \
+        """Encodes the type in bytes, according to the protocol specification.
+
+        Returns:
+            bytes: The encoded bytes.
+        """
+
+        _ = (self.origin << 7) | \
             (self.type << 4) | \
             self.flags
-        
-        return n.to_bytes(1, "big")
+
+        return _.to_bytes(1, "big")
 
 class Message:
     """Dragonfly message"""
@@ -86,17 +109,17 @@ class Message:
         self.type = MessageType(origin<<7 | type_<<4 | flags)
         for k, v in kwargs.items():
             setattr(self, k, v)
-    
+
     def __repr__(self):
         #return f"<v{self.version} Message of type {self.type}>"
         return str(self.__dict__)
-    
+
     def from_bytes(self, bytes_):
         """Parses a message from bytes
 
         Args:
             bytes_ (bytes): The message's bytes.
-        
+
         Returns:
             True if the message has been successfully decoded, False otherwise.
         """
@@ -113,7 +136,7 @@ class Message:
 
                 if self.type.flags & FLAG_1:
                     self.username = self.read_string(stream)
-                
+
                 if self.type.flags & FLAG_0:
                     self.password = self.read_string(stream)
 
@@ -126,27 +149,27 @@ class Message:
 
             elif self.type.type == UNSUBSCRIBE:
                 self.topic = self.read_string(stream)
-            
+
             elif self.type.type in [CONNECTED, PUBLISHED, SUBSCRIBED, UNSUBSCRIBED]:
                 self.code = struct.unpack(">B", stream.read(1))[0]
-            
+
             else:
                 raise InvalidMessageType(f"{self.type.type} is not a valid message type")
-        
+
         except struct.error:
             logging.getLogger("dragonfly").error("Malformed message")
             return False
-        
+
         except UnicodeDecodeError:
             logging.getLogger("dragonfly").error("Cannot decode non utf-8 characters")
             return False
-        
+
         except InvalidMessageType as e:
             logging.getLogger("dragonfly").error(e)
             return False
-        
+
         return True
-        
+
 
     def to_bytes(self):
         """Formats the message to bytes
@@ -164,7 +187,7 @@ class Message:
                 if hasattr(self, "username") and self.username:
                     self.type.flags |= FLAG_1
                     body += self.write_string(self.username)
-                
+
                 if hasattr(self, "password") and self.password:
                     self.type.flags |= FLAG_0
                     body += self.write_string(self.password)
@@ -172,31 +195,31 @@ class Message:
             elif self.type.type == PUBLISH:
                 if not hasattr(self, "topic"):
                     raise MissingProperty(f"The message is of type {type_name(self.type.type)} but is missing property 'topic'.")
-                
+
                 if not hasattr(self, "body"):
                     raise MissingProperty(f"The message is of type {type_name(self.type.type)} but is missing property 'body'.")
-                
+
                 body += self.write_string(self.topic)
                 body += self.write_string(self.body)
 
             elif self.type.type == SUBSCRIBE:
                 if not hasattr(self, "topic"):
                     raise MissingProperty(f"The message is of type {type_name(self.type.type)} but is missing property 'topic'.")
-                
+
                 body += self.write_string(self.topic)
 
             elif self.type.type == UNSUBSCRIBE:
                 if not hasattr(self, "topic"):
                     raise MissingProperty(f"The message is of type {type_name(self.type.type)} but is missing property 'topic'.")
-                
+
                 body += self.write_string(self.topic)
-            
+
             elif self.type.type in [CONNECTED, PUBLISHED, SUBSCRIBED, UNSUBSCRIBED]:
                 if not hasattr(self, "code") or self.code is None:
                     self.code = 0
-                
+
                 body += struct.pack(">B", self.code)
-            
+
             else:
                 raise InvalidMessageType(f"{self.type.type} is not a valid message type")
 
@@ -204,19 +227,19 @@ class Message:
             bytes_ += self.type.to_bytes()
             bytes_ += struct.pack(">I", len(body))
             bytes_ += body
-        
+
         except UnicodeEncodeError:
             logging.getLogger("dragonfly").error("Cannot encode non utf-8 characters")
-        
+
         except InvalidMessageType as e:
             logging.getLogger("dragonfly").error(e)
-        
+
         except MissingProperty as e:
             logging.getLogger("dragonfly").error(e)
 
         self.bytes = bytes_
         return bytes_
-    
+
     def read_string(self, stream):
         """Reads a string from a byte stream
 
@@ -233,7 +256,7 @@ class Message:
 
         length = struct.unpack(">H", stream.read(2))[0]
         return stream.read(length).decode("utf-8")
-    
+
     def write_string(self, string):
         """Formats a string to bytes
 
@@ -248,7 +271,8 @@ class Message:
             bytes: The encoded string or None if ``string`` is empty.
         """
 
-        if string is None: string = ""
+        if string is None:
+            string = ""
         bytes_ = struct.pack(">H", len(string))
         bytes_ += string.encode("utf-8")
         return bytes_
