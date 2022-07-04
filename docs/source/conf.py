@@ -85,8 +85,10 @@ pygments_style = 'sphinx'
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = True
 
-# Class docstring should be combined with their respective __init__ docstring
-autoclass_content = 'both'
+# Make sure __init__'s are documented
+autodoc_default_options = {
+    'special-members': '__init__'
+}
 
 # -- Options for HTML output ----------------------------------------------
 
