@@ -102,7 +102,7 @@ class Config:
 
         self._path = path
 
-        with open(path, "r") as f:
+        with open(path, "r", encoding="utf-8") as f:
             lines = f.read().split("\n")
 
         config = {
