@@ -127,3 +127,7 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Coverage badge info
+.coverage_badge/
+coverage.sh
